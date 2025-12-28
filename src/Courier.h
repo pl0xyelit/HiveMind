@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
-
+#include <vector>
+#include "Package.h"
 struct Vec2 {
     int x, y;
 };
@@ -40,6 +41,7 @@ protected:
     int consumption;
     int cost;
     int packageCapacity;
+    std::vector<Package*> packages;
 };
 
 class Drone : public Actor {

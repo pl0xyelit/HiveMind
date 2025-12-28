@@ -13,7 +13,9 @@ Actor::Actor(Vec2 startPos,
       consumption(consumptionPerTick),
       cost(costPerTick),
       packageCapacity(capacity)
-{}
+{
+    packages.resize(packageCapacity);
+}
 
 void Actor::applyMove(const Vec2& newPos) {
     pos = newPos;
@@ -37,7 +39,10 @@ Drone::Drone(Vec2 startPos)
             /*consumption*/ 10,
             /*cost*/ 15,
             /*capacity*/ 1)
-{}
+{
+    packages.resize(packageCapacity);
+
+}
 
 bool Drone::canFly() const { return true; }
 std::string Drone::typeName() const { return "Drone"; }
@@ -56,7 +61,9 @@ Robot::Robot(Vec2 startPos)
             /*consumption*/ 2,
             /*cost*/ 1,
             /*capacity*/ 4)
-{}
+{
+    packages.resize(packageCapacity);
+}
 
 bool Robot::canFly() const { return false; }
 std::string Robot::typeName() const { return "Robot"; }
@@ -75,7 +82,9 @@ Scooter::Scooter(Vec2 startPos)
             /*consumption*/ 5,
             /*cost*/ 4,
             /*capacity*/ 2)
-{}
+{
+    packages.resize(packageCapacity);
+}
 
 bool Scooter::canFly() const { return false; }
 std::string Scooter::typeName() const { return "Scooter"; }
