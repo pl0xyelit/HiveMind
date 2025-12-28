@@ -1,0 +1,6 @@
+Delivered: 50
+Delayed: 48
+Lost: 0
+Operating cost: 51000
+Dead agents: 0
+Profit: -29213
