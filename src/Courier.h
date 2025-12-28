@@ -6,16 +6,16 @@ struct Vec2 {
     int x, y;
 };
 
-class Actor {
+class Courier {
 public:
-    Actor(Vec2 startPos,
+    Courier(Vec2 startPos,
           int speedPerTick,
           int maxBattery,
           int consumptionPerTick,
           int costPerTick,
           int capacity);
 
-    virtual ~Actor() = default;
+    virtual ~Courier() = default;
 
     virtual bool canFly() const = 0;
     virtual std::string typeName() const = 0;
@@ -44,7 +44,7 @@ protected:
     std::vector<Package*> packages;
 };
 
-class Drone : public Actor {
+class Drone : public Courier {
 public:
     explicit Drone(Vec2 startPos);
 
@@ -53,7 +53,7 @@ public:
     Vec2 computeNextMove() override;
 };
 
-class Robot : public Actor {
+class Robot : public Courier {
 public:
     explicit Robot(Vec2 startPos);
 
@@ -62,7 +62,7 @@ public:
     Vec2 computeNextMove() override;
 };
 
-class Scooter : public Actor {
+class Scooter : public Courier {
 public:
     explicit Scooter(Vec2 startPos);
 

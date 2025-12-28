@@ -1,6 +1,6 @@
 #include "Courier.h"
 
-Actor::Actor(Vec2 startPos,
+Courier::Courier(Vec2 startPos,
              int speedPerTick,
              int maxBattery,
              int consumptionPerTick,
@@ -17,23 +17,23 @@ Actor::Actor(Vec2 startPos,
     packages.resize(packageCapacity);
 }
 
-void Actor::applyMove(const Vec2& newPos) {
+void Courier::applyMove(const Vec2& newPos) {
     pos = newPos;
     battery -= consumption;
     if (battery < 0) battery = 0;
 }
 
-Vec2 Actor::getPos() const { return pos; }
-int Actor::getSpeed() const { return speed; }
-int Actor::getBattery() const { return battery; }
-int Actor::getMaxBattery() const { return maxBattery; }
-int Actor::getCost() const { return cost; }
-int Actor::getCapacity() const { return packageCapacity; }
+Vec2 Courier::getPos() const { return pos; }
+int Courier::getSpeed() const { return speed; }
+int Courier::getBattery() const { return battery; }
+int Courier::getMaxBattery() const { return maxBattery; }
+int Courier::getCost() const { return cost; }
+int Courier::getCapacity() const { return packageCapacity; }
 
 // ---------------- Drone ----------------
 
 Drone::Drone(Vec2 startPos)
-    : Actor(startPos,
+    : Courier(startPos,
             /*speed*/ 3,
             /*maxBattery*/ 100,
             /*consumption*/ 10,
@@ -55,7 +55,7 @@ Vec2 Drone::computeNextMove() {
 // ---------------- Robot ----------------
 
 Robot::Robot(Vec2 startPos)
-    : Actor(startPos,
+    : Courier(startPos,
             /*speed*/ 1,
             /*maxBattery*/ 300,
             /*consumption*/ 2,
@@ -76,7 +76,7 @@ Vec2 Robot::computeNextMove() {
 // ---------------- Scooter ----------------
 
 Scooter::Scooter(Vec2 startPos)
-    : Actor(startPos,
+    : Courier(startPos,
             /*speed*/ 2,
             /*maxBattery*/ 200,
             /*consumption*/ 5,

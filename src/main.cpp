@@ -8,9 +8,9 @@
 
 // // placeholder
 
-// class Actor {
+// class Courier {
 // public:
-//     Actor(int x, int y) : pos{x, y} {}
+//     Courier(int x, int y) : pos{x, y} {}
 
 //     // Hook for your future logic:
 //     // Decide where the actor *wants* to move this tick.
@@ -27,9 +27,9 @@
 //     Vec2 pos;
 // };
 
-// class SimpleActor : public Actor {
+// class SimpleActor : public Courier {
 // public:
-//     using Actor::Actor;
+//     using Courier::Courier;
 
 //     // For now, move right every tick.
 //     Vec2 computeNextMove() override {
@@ -41,7 +41,7 @@
 // public:
 //     Simulation(int M, int N) : rows(M), cols(N) {}
 
-//     void addActor(std::unique_ptr<Actor> actor) {
+//     void addActor(std::unique_ptr<Courier> actor) {
 //         actors.push_back(std::move(actor));
 //     }
 
@@ -73,13 +73,13 @@
 //     void printState() const {
 //         for (size_t i = 0; i < actors.size(); ++i) {
 //             auto p = actors[i]->getPos();
-//             std::cout << "Actor " << i << " at (" << p.x << ", " << p.y << ")\n";
+//             std::cout << "Courier " << i << " at (" << p.x << ", " << p.y << ")\n";
 //         }
 //     }
 
 // private:
 //     int rows, cols;
-//     std::vector<std::unique_ptr<Actor>> actors;
+//     std::vector<std::unique_ptr<Courier>> actors;
 // };
 
 // int main() {
