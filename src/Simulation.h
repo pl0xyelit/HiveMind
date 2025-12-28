@@ -29,6 +29,8 @@ public:
     void spawnCouriers();
     void run();
     void render(); // display current simulation state to terminal
+    bool isAllDelivered();
+    void setAllDelivered();
 
 private:
     Config cfg;
@@ -50,7 +52,7 @@ private:
     int deadAgents = 0;
 
     std::mt19937 rng;
-
+    bool allDelivered = false;
     void spawnPackage();
     void spawnPackagesIfNeeded();
 

@@ -27,7 +27,7 @@ void Simulation::render() {
         countAt[{p.x,p.y}]++;
         char ch = '?';
         std::string tn = c->typeName();
-        if (tn == "Drone") ch = 'D';
+        if (tn == "Drone") ch = '^';
         else if (tn == "Robot") ch = 'R';
         else if (tn == "Scooter") ch = 'S';
         view[p.y][p.x] = ch;
@@ -44,6 +44,9 @@ void Simulation::render() {
     for (const auto& p : packages) {
         if (p->isDelivered()) {
             ++delivered;
+            if(delivered == cfg.totalPackages) {
+                setAllDelivered();
+            }
             if (p->deliveredAt() > p->getDeadline()) ++delayed;
         }
     }
@@ -65,6 +68,13 @@ void Simulation::render() {
 
     std::cout << std::flush;
     std::this_thread::sleep_for(std::chrono::milliseconds(cfg.displayDelayMs));
+}
+bool Simulation::isAllDelivered() {
+    return allDelivered;
+}
+
+void Simulation::setAllDelivered() {
+    allDelivered = true;
 }
 
 Simulation::Simulation(const std::string& configPath)
@@ -378,6 +388,9 @@ void Simulation::run() {
     while (currentTick < cfg.maxTicks) {
         step();
         render();
+        if(Simulation::isAllDelivered()) {
+            break;
+        }
     }
 
     writeReport();
