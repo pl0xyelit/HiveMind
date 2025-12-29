@@ -19,28 +19,29 @@ void Simulation::render() {
     std::vector<std::string> view = grid;
 
     // overlay couriers
-    std::map<std::pair<int,int>, int> countAt;
+    //std::map<std::pair<int,int>, int> countAt;
     for (auto& c : couriers) {
         if (c->isDead()) continue;
         Vec2 p = c->getPos();
         if (p.x < 0 || p.x >= cfg.cols || p.y < 0 || p.y >= cfg.rows || (p.x == basePos.x && p.y == basePos.y)) continue;
-        countAt[{p.x,p.y}]++;
+        //countAt[{p.x,p.y}]++;
         char ch = '?';
         std::string tn = c->typeName();
         if (tn == "Drone") ch = '^';
         else if (tn == "Robot") ch = 'R';
-        else if (tn == "Scooter") ch = 'S';
-        view[p.y][p.x] = ch;
+        else if (tn == "Scooter") ch = 's'; // lowercase 's' to distinguish from station 'S'
+        view[p.y][p.x] = ch; 
     }
 
     // show grid
     for (int y = 0; y < cfg.rows; ++y) {
         for (int x = 0; x < cfg.cols; ++x) {
             char c = view[y][x];
-            // color destinations (D), base (B) and stations (S)
+            // color destinations (D), base (B), stations (S) and scooter ('s')
             if (c == 'D') std::cout << "\x1B[1;32mD\x1B[0m";      // bright green
             else if (c == 'B') std::cout << "\x1B[1;36mB\x1B[0m"; // bright cyan
-            else if (c == 'S') std::cout << "\x1B[1;33mS\x1B[0m"; // bright yellow
+            else if (c == 'S') std::cout << "\x1B[1;33mS\x1B[0m"; // bright yellow (station)
+            else if (c == 's') std::cout << "\x1B[1;35ms\x1B[0m"; // bright magenta (scooter)
             else std::cout << c;
         }
         std::cout << "\n";
@@ -311,6 +312,7 @@ void Simulation::hiveMindDispatch() {
                 bestScore = score;
                 bestIdx = (int)i;
             }
+            
         }
         if (bestIdx >= 0 && bestScore > -100000) {
             bool ok = couriers[bestIdx]->assignPackage(pkg);
