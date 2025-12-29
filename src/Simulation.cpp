@@ -35,7 +35,15 @@ void Simulation::render() {
 
     // show grid
     for (int y = 0; y < cfg.rows; ++y) {
-        std::cout << view[y] << "\n";
+        for (int x = 0; x < cfg.cols; ++x) {
+            char c = view[y][x];
+            // color destinations (D), base (B) and stations (S)
+            if (c == 'D') std::cout << "\x1B[1;32mD\x1B[0m";      // bright green
+            else if (c == 'B') std::cout << "\x1B[1;36mB\x1B[0m"; // bright cyan
+            else if (c == 'S') std::cout << "\x1B[1;33mS\x1B[0m"; // bright yellow
+            else std::cout << c;
+        }
+        std::cout << "\n";
     }
 
     // stats
