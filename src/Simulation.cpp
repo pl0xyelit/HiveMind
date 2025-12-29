@@ -23,7 +23,7 @@ void Simulation::render() {
     for (auto& c : couriers) {
         if (c->isDead()) continue;
         Vec2 p = c->getPos();
-        if (p.x < 0 || p.x >= cfg.cols || p.y < 0 || p.y >= cfg.rows) continue;
+        if (p.x < 0 || p.x >= cfg.cols || p.y < 0 || p.y >= cfg.rows || (p.x == basePos.x && p.y == basePos.y)) continue;
         countAt[{p.x,p.y}]++;
         char ch = '?';
         std::string tn = c->typeName();
