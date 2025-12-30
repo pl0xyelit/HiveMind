@@ -40,5 +40,6 @@
 # debug information files
 *.dwo
 
+# project-specific
 hive_sim
-hive_sim
+simulation.txt

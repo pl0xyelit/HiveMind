@@ -29,7 +29,8 @@ void Simulation::render() {
         std::string tn = c->typeName();
         if (tn == "Drone") ch = '^';
         else if (tn == "Robot") ch = 'R';
-        else if (tn == "Scooter") ch = 's'; // lowercase 's' to distinguish from station 'S'
+        else if (tn == "Scooter") ch = 'S'; // litera mare S din alfabetul latin, altfel aveam conflict cu randarea S-ului
+                                            // de la statiile de incarcare
         view[p.y][p.x] = ch; 
     }
 
@@ -38,10 +39,13 @@ void Simulation::render() {
         for (int x = 0; x < cfg.cols; ++x) {
             char c = view[y][x];
             // color destinations (D), base (B), stations (S) and scooter ('s')
-            if (c == 'D') std::cout << "\x1B[1;32mD\x1B[0m";      // bright green
-            else if (c == 'B') std::cout << "\x1B[1;36mB\x1B[0m"; // bright cyan
-            else if (c == 'S') std::cout << "\x1B[1;33mS\x1B[0m"; // bright yellow (station)
-            else if (c == 's') std::cout << "\x1B[1;35ms\x1B[0m"; // bright magenta (scooter)
+            // ANSI escape codes baby
+            if (c == 'D') std::cout << "\x1B[1;32mD\x1B[0m";      // green (destination)
+            else if (c == 'B') std::cout << "\x1B[1;36mB\x1B[0m"; // bright cyan (base)
+            else if (c == 'S') std::cout << "\x1B[1;33mS\x1B[0m"; // yellow (station)
+            else if (c == 'S') std::cout << "\x1B[1;35mS\x1B[0m"; // magenta (scooter)
+            else if (c == '^') std::cout << "\x1B[1;34m^\x1B[0m"; // blue (drone)
+            else if (c == 'R') std::cout << "\x1B[1;92mR\x1B[0m"; // gray (robot)
             else std::cout << c;
         }
         std::cout << "\n";
