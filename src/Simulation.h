@@ -31,6 +31,7 @@ public:
     void render(); // display current simulation state to terminal
     bool isAllDelivered();
     void setAllDelivered();
+    void loadMapFromFile(std::string mapFile);
 
 private:
     Config cfg;

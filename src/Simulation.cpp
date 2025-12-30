@@ -173,6 +173,19 @@ void Simulation::generateMap() {
     }
 }
 
+void Simulation::loadMapFromFile(std::string mapFile) {
+    std::ifstream in(mapFile);
+    if (!in) {
+        std::cerr << "Could not open config file: " << configPath << "\n";
+        return;
+    }
+    std::string line;
+    while(std::getline(in, line)) {
+        grid.push_back(line);
+    }
+
+}
+
 void Simulation::spawnCouriers() {
     couriers.clear();
     for (int i = 0; i < cfg.drones; ++i) {
