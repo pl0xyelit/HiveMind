@@ -6,10 +6,22 @@
     * Strategia 1: genereaza harta pe baza unui fisier text, deja dat (pentru debug, harta nu trebuie hardcodata)
     * Strategia 2: genereaza harta pe baza unui noisemap, procedural
 ## Algoritmi
+* Dispatch (trebuie sa eficientizez algoritmul pentru profit)
+* Noisemap procedural generation pentru harta hahahahah
+
+
+
+
+# Ce am facut deja:
+## Algoritmi
 * Sistem bazat pe tick-uri (gen minecraft hahahahahah)
 * Dispatch (crearea unei logici care ia diverse actiuni la fiecare tick)
-* Noisemap procedural generation pentru harta hahahahah
-* 
+## Design patterns
+* Factory:
+    * Nu cred ca am implementat patternul, dar robotii sunt creati
+* Strategy (doar ca NU e implementat cum trebuie modelul Strategy, NU am o interfata IMapGenerator pentru asta)
+    * Strategia 1: genereaza harta pe baza unui fisier text, deja dat (pentru debug, harta nu trebuie hardcodata)
+    * Strategia 2: genereaza harta pe baza unui noisemap, procedural
 
 # Structura: ce am nevoie:
 ## Clase
@@ -34,4 +46,3 @@
             * punct de plecare/spawnare a Courierilor
             * locul de unde este preluat fiecare pachet, cu scopul de a fi trimis
             * stationarea in Baza produce aceiasi incarcare ca o statie de incarcare
-### Actori
