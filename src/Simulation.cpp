@@ -11,6 +11,10 @@
 #include <chrono>
 #include <iomanip>
 
+#include "IMapGenerator.h"
+#include "FileMapLoader.h"
+#include "ProceduralMapGenerator.h"
+
 void Simulation::render() {
     // clear terminal
     std::cout << "\x1B[2J\x1B[H";
@@ -95,6 +99,9 @@ Simulation::Simulation(const std::string& configPath)
 {
     std::random_device rd;
     rng.seed(rd());
+
+    // Defer choosing map generator until after config is loaded.
+    mapGenerator = nullptr;
 }
 
 bool Simulation::loadConfig() {
@@ -122,55 +129,72 @@ bool Simulation::loadConfig() {
         else if (key == "TOTAL_PACKAGES:") iss >> cfg.totalPackages;
         else if (key == "SPAWN_FREQUENCY:") iss >> cfg.spawnFrequency;
         else if (key == "DISPLAY_DELAY_MS:") iss >> cfg.displayDelayMs;
+        else if (key == "MAP_FILE:") {
+            std::string mfile; iss >> mfile;
+            if (!mfile.empty()) {
+                mapGenerator = std::make_unique<FileMapLoader>(mfile);
+                std::cout << "Using map file from config: " << mfile << "\n";
+            }
+        }
     }
     return true;
 } 
 
+void Simulation::setMapGenerator(std::unique_ptr<IMapGenerator> gen) {
+    mapGenerator = std::move(gen);
+}
+
+bool Simulation::validateMap() const {
+    // Ensure base is inside grid
+    if (basePos.x < 0 || basePos.x >= cfg.cols || basePos.y < 0 || basePos.y >= cfg.rows) return false;
+    std::vector<int> visited(cfg.rows * cfg.cols, 0);
+    std::queue<Vec2> q;
+    q.push(basePos);
+    visited[basePos.y * cfg.cols + basePos.x] = 1;
+    const int dx[4] = {1,-1,0,0};
+    const int dy[4] = {0,0,1,-1};
+    while (!q.empty()) {
+        Vec2 p = q.front(); q.pop();
+        for (int k = 0; k < 4; ++k) {
+            int nx = p.x + dx[k];
+            int ny = p.y + dy[k];
+            if (nx < 0 || ny < 0 || nx >= cfg.cols || ny >= cfg.rows) continue;
+            if (visited[ny * cfg.cols + nx]) continue;
+            if (grid[ny][nx] == '#') continue;
+            visited[ny * cfg.cols + nx] = 1;
+            q.push({nx, ny});
+        }
+    }
+    for (const auto& c : clients) {
+        if (!visited[c.y * cfg.cols + c.x]) return false;
+    }
+    for (const auto& s : stations) {
+        if (!visited[s.y * cfg.cols + s.x]) return false;
+    }
+    return true;
+}
+
 void Simulation::generateMap() {
-    grid.assign(cfg.rows, std::string(cfg.cols, '.'));
-    // Place base in center (x=col, y=row)
-    basePos = {cfg.cols/2, cfg.rows/2};
-    grid[basePos.y][basePos.x] = 'B';
+    if (!mapGenerator) mapGenerator = std::make_unique<ProceduralMapGenerator>();
 
-    // random placements
-    std::uniform_int_distribution<int> rx(0, cfg.cols-1);
-    std::uniform_int_distribution<int> ry(0, cfg.rows-1);
+    int attempts = 0;
+    const int maxAttempts = 1000;
+    bool canRegenerate = (dynamic_cast<ProceduralMapGenerator*>(mapGenerator.get()) != nullptr);
 
-    // place clients
-    clients.clear();
-    for (int i = 0; i < cfg.clientsCount; ++i) {
-        while (true) {
-            int x = rx(rng);
-            int y = ry(rng);
-            if (grid[y][x] == '.') {
-                grid[y][x] = 'D';
-                clients.push_back({x,y});
+    do {
+        mapGenerator->generate(cfg, rng, grid, basePos, clients, stations);
+        ++attempts;
+        if (!validateMap()) {
+            if (!canRegenerate) {
+                std::cerr << "Loaded map is invalid (not all clients/stations reachable from base).\n";
+                break;
+            }
+            if (attempts >= maxAttempts) {
+                std::cerr << "Failed to generate a valid map after " << attempts << " attempts; using last map.\n";
                 break;
             }
         }
-    }
-
-    // place stations
-    stations.clear();
-    for (int i = 0; i < cfg.maxStations; ++i) {
-        while (true) {
-            int x = rx(rng);
-            int y = ry(rng);
-            if (grid[y][x] == '.') {
-                grid[y][x] = 'S';
-                stations.push_back({x,y});
-                break;
-            }
-        }
-    }
-
-    // add some walls
-    std::uniform_real_distribution<> frac(0.0, 1.0);
-    for (int y = 0; y < cfg.rows; ++y) {
-        for (int x = 0; x < cfg.cols; ++x) {
-            if (grid[y][x] == '.' && frac(rng) < 0.08) grid[y][x] = '#';
-        }
-    }
+    } while (!validateMap() && canRegenerate);
 }
 
 void Simulation::loadMapFromFile(std::string mapFile) {

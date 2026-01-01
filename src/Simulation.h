@@ -21,11 +21,17 @@ struct Config {
     int displayDelayMs = 100; // milliseconds between ticks when rendering
 };
 
+#include "IMapGenerator.h"
+
 class Simulation {
 public:
     explicit Simulation(const std::string& configPath = "simulation_setup.txt");
     bool loadConfig();
+
+    // map generation uses Strategy pattern via IMapGenerator
+    void setMapGenerator(std::unique_ptr<IMapGenerator> gen);
     void generateMap();
+
     void spawnCouriers();
     void run();
     void render(); // display current simulation state to terminal
@@ -53,6 +59,11 @@ private:
     int deadAgents = 0;
 
     std::mt19937 rng;
+
+    // map generation strategy
+    std::unique_ptr<IMapGenerator> mapGenerator;
+    bool validateMap() const;
+
     bool allDelivered = false;
     void spawnPackage();
     void spawnPackagesIfNeeded();
