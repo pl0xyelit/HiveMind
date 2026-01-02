@@ -9,12 +9,12 @@ void ProceduralMapGenerator::generate(Config& cfg, std::mt19937& rng, std::vecto
                                       Vec2& basePos, std::vector<Vec2>& clients, std::vector<Vec2>& stations) {
     grid.assign(cfg.rows, std::string(cfg.cols, '.'));
     // Place base in center (x=col, y=row)
-    basePos = {cfg.cols/2, cfg.rows/2};
-    grid[basePos.y][basePos.x] = 'B';
+    basePos = {cfg.rows/2, cfg.cols/2};
+    grid[basePos.x][basePos.y] = 'B';
 
     // random placements
-    std::uniform_int_distribution<int> rx(0, cfg.cols-1);
-    std::uniform_int_distribution<int> ry(0, cfg.rows-1);
+    std::uniform_int_distribution<int> rx(0, cfg.rows-1);
+    std::uniform_int_distribution<int> ry(0, cfg.cols-1);
 
     // place clients
     clients.clear();
@@ -22,8 +22,8 @@ void ProceduralMapGenerator::generate(Config& cfg, std::mt19937& rng, std::vecto
         while (true) {
             int x = rx(rng);
             int y = ry(rng);
-            if (grid[y][x] == '.') {
-                grid[y][x] = 'D';
+            if (grid[x][y] == '.') {
+                grid[x][y] = 'D';
                 clients.push_back({x,y});
                 break;
             }
@@ -36,8 +36,8 @@ void ProceduralMapGenerator::generate(Config& cfg, std::mt19937& rng, std::vecto
         while (true) {
             int x = rx(rng);
             int y = ry(rng);
-            if (grid[y][x] == '.') {
-                grid[y][x] = 'S';
+            if (grid[x][y] == '.') {
+                grid[x][y] = 'S';
                 stations.push_back({x,y});
                 break;
             }
@@ -46,9 +46,9 @@ void ProceduralMapGenerator::generate(Config& cfg, std::mt19937& rng, std::vecto
 
     // add some walls
     std::uniform_real_distribution<> frac(0.0, 1.0);
-    for (int y = 0; y < cfg.rows; ++y) {
-        for (int x = 0; x < cfg.cols; ++x) {
-            if (grid[y][x] == '.' && frac(rng) < wallProb) grid[y][x] = '#';
+    for (int x = 0; x < cfg.rows; ++x) {
+        for (int y = 0; y < cfg.cols; ++y) {
+            if (grid[x][y] == '.' && frac(rng) < wallProb) grid[x][y] = '#';
         }
     }
 }

@@ -27,7 +27,7 @@ void Simulation::render() {
     for (auto& c : couriers) {
         if (c->isDead()) continue;
         Vec2 p = c->getPos();
-        if (p.x < 0 || p.x >= cfg.cols || p.y < 0 || p.y >= cfg.rows || (p.x == basePos.x && p.y == basePos.y)) continue;
+        if (p.x < 0 || p.x >= cfg.rows || p.y < 0 || p.y >= cfg.cols || (p.x == basePos.x && p.y == basePos.y)) continue;
         //countAt[{p.x,p.y}]++;
         char ch = '?';
         std::string tn = c->typeName();
@@ -35,13 +35,13 @@ void Simulation::render() {
         else if (tn == "Robot") ch = 'R';
         else if (tn == "Scooter") ch = 'S'; // litera mare S din alfabetul latin, altfel aveam conflict cu randarea S-ului
                                             // de la statiile de incarcare
-        view[p.y][p.x] = ch; 
+        view[p.x][p.y] = ch; 
     }
 
     // show grid
-    for (int y = 0; y < cfg.rows; ++y) {
-        for (int x = 0; x < cfg.cols; ++x) {
-            char c = view[y][x];
+    for (int x = 0; x < cfg.rows; ++x) {
+        for (int y = 0; y < cfg.cols; ++y) {
+            char c = view[x][y];
             // color destinations (D), base (B), stations (S) and scooter ('s')
             // ANSI escape codes baby
             if (c == 'D') std::cout << "\x1B[1;32mD\x1B[0m";      // green (destination)
@@ -146,30 +146,30 @@ void Simulation::setMapGenerator(std::unique_ptr<IMapGenerator> gen) {
 
 bool Simulation::validateMap() const {
     // Ensure base is inside grid
-    if (basePos.x < 0 || basePos.x >= cfg.cols || basePos.y < 0 || basePos.y >= cfg.rows) return false;
+    if (basePos.x < 0 || basePos.x >= cfg.rows || basePos.y < 0 || basePos.y >= cfg.cols) return false;
     std::vector<int> visited(cfg.rows * cfg.cols, 0);
     std::queue<Vec2> q;
     q.push(basePos);
-    visited[basePos.y * cfg.cols + basePos.x] = 1;
-    const int dx[4] = {1,-1,0,0};
-    const int dy[4] = {0,0,1,-1};
+    visited[basePos.x * cfg.cols + basePos.y] = 1;
+    const int dr[4] = {1,-1,0,0};
+    const int dc[4] = {0,0,1,-1};
     while (!q.empty()) {
         Vec2 p = q.front(); q.pop();
         for (int k = 0; k < 4; ++k) {
-            int nx = p.x + dx[k];
-            int ny = p.y + dy[k];
-            if (nx < 0 || ny < 0 || nx >= cfg.cols || ny >= cfg.rows) continue;
-            if (visited[ny * cfg.cols + nx]) continue;
-            if (grid[ny][nx] == '#') continue;
-            visited[ny * cfg.cols + nx] = 1;
-            q.push({nx, ny});
+            int nr = p.x + dr[k];
+            int nc = p.y + dc[k];
+            if (nr < 0 || nc < 0 || nr >= cfg.rows || nc >= cfg.cols) continue;
+            if (visited[nr * cfg.cols + nc]) continue;
+            if (grid[nr][nc] == '#') continue;
+            visited[nr * cfg.cols + nc] = 1;
+            q.push({nr, nc});
         }
     }
     for (const auto& c : clients) {
-        if (!visited[c.y * cfg.cols + c.x]) return false;
+        if (!visited[c.x * cfg.cols + c.y]) return false;
     }
     for (const auto& s : stations) {
-        if (!visited[s.y * cfg.cols + s.x]) return false;
+        if (!visited[s.x * cfg.cols + s.y]) return false;
     }
     return true;
 }
@@ -235,9 +235,9 @@ void Simulation::loadMapFromFile(std::string mapFile) {
     clients.clear();
     stations.clear();
     bool foundBase = false;
-    for (int y = 0; y < cfg.rows; ++y) {
-        for (int x = 0; x < cfg.cols; ++x) {
-            char c = grid[y][x];
+    for (int x = 0; x < cfg.rows; ++x) {
+        for (int y = 0; y < cfg.cols; ++y) {
+            char c = grid[x][y];
             if (c == 'B') {
                 basePos = {x, y};
                 foundBase = true;
@@ -250,8 +250,8 @@ void Simulation::loadMapFromFile(std::string mapFile) {
     }
 
     if (!foundBase) {
-        basePos = {cfg.cols/2, cfg.rows/2};
-        grid[basePos.y][basePos.x] = 'B';
+        basePos = {cfg.rows/2, cfg.cols/2};
+        grid[basePos.x][basePos.y] = 'B';
         std::cerr << "Map has no base (B); placing base at center (" << basePos.x << "," << basePos.y << ")\n";
     }
 
@@ -305,20 +305,20 @@ int Simulation::computeDistance(const Vec2& a, const Vec2& b, bool canFly) const
     std::vector<int> visited(cfg.rows * cfg.cols, 0);
     std::queue<std::pair<Vec2,int>> q;
     q.push({a, 0});
-    visited[a.y * cfg.cols + a.x] = 1;
-    const int dx[4] = {1,-1,0,0};
-    const int dy[4] = {0,0,1,-1};
+    visited[a.x * cfg.cols + a.y] = 1;
+    const int dr[4] = {1,-1,0,0};
+    const int dc[4] = {0,0,1,-1};
     while (!q.empty()) {
         auto [p, d] = q.front(); q.pop();
         for (int k = 0; k < 4; ++k) {
-            int nx = p.x + dx[k];
-            int ny = p.y + dy[k];
-            if (nx < 0 || ny < 0 || nx >= cfg.cols || ny >= cfg.rows) continue;
-            if (visited[ny * cfg.cols + nx]) continue;
-            if (grid[ny][nx] == '#') continue;
-            if (nx == b.x && ny == b.y) return d+1;
-            visited[ny * cfg.cols + nx] = 1;
-            q.push({{nx, ny}, d+1});
+            int nr = p.x + dr[k];
+            int nc = p.y + dc[k];
+            if (nr < 0 || nc < 0 || nr >= cfg.rows || nc >= cfg.cols) continue;
+            if (visited[nr * cfg.cols + nc]) continue;
+            if (grid[nr][nc] == '#') continue;
+            if (nr == b.x && nc == b.y) return d+1;
+            visited[nr * cfg.cols + nc] = 1;
+            q.push({{nr, nc}, d+1});
         }
     }
     return -1; // unreachable
@@ -344,31 +344,31 @@ std::vector<Vec2> Simulation::findPath(const Vec2& a, const Vec2& b, bool canFly
     std::vector<int> parent(cfg.rows * cfg.cols, -1);
     std::queue<Vec2> q;
     q.push(a);
-    visited[a.y * cfg.cols + a.x] = 1;
-    const int dx[4] = {1,-1,0,0};
-    const int dy[4] = {0,0,1,-1};
+    visited[a.x * cfg.cols + a.y] = 1;
+    const int dr[4] = {1,-1,0,0};
+    const int dc[4] = {0,0,1,-1};
     bool found = false;
     while (!q.empty() && !found) {
         Vec2 p = q.front(); q.pop();
         for (int k = 0; k < 4; ++k) {
-            int nx = p.x + dx[k];
-            int ny = p.y + dy[k];
-            if (nx < 0 || ny < 0 || nx >= cfg.cols || ny >= cfg.rows) continue;
-            if (visited[ny * cfg.cols + nx]) continue;
-            if (grid[ny][nx] == '#') continue;
-            visited[ny * cfg.cols + nx] = 1;
-            parent[ny * cfg.cols + nx] = p.y * cfg.cols + p.x;
-            if (nx == b.x && ny == b.y) { found = true; break; }
-            q.push({nx, ny});
+            int nr = p.x + dr[k];
+            int nc = p.y + dc[k];
+            if (nr < 0 || nc < 0 || nr >= cfg.rows || nc >= cfg.cols) continue;
+            if (visited[nr * cfg.cols + nc]) continue;
+            if (grid[nr][nc] == '#') continue;
+            visited[nr * cfg.cols + nc] = 1;
+            parent[nr * cfg.cols + nc] = p.x * cfg.cols + p.y;
+            if (nr == b.x && nc == b.y) { found = true; break; }
+            q.push({nr, nc});
         }
     }
     if (!found) return path;
     // reconstruct
-    int idx = b.y * cfg.cols + b.x;
-    while (idx != -1 && idx != (a.y * cfg.cols + a.x)) {
-        int px = idx % cfg.cols;
-        int py = idx / cfg.cols;
-        path.push_back({px, py});
+    int idx = b.x * cfg.cols + b.y;
+    while (idx != -1 && idx != (a.x * cfg.cols + a.y)) {
+        int row = idx / cfg.cols;
+        int col = idx % cfg.cols;
+        path.push_back({row, col});
         idx = parent[idx];
     }
     std::reverse(path.begin(), path.end());
@@ -462,7 +462,7 @@ void Simulation::step() {
         }
 
         // after movement, check if courier is on S or B to recharge a bit
-        char cell = grid[c->getPos().y][c->getPos().x];
+        char cell = grid[c->getPos().x][c->getPos().y];
         if (cell == 'S' || cell == 'B') {
             int add = c->getMaxBattery() / 4;
             c->recharge(add);
@@ -470,7 +470,7 @@ void Simulation::step() {
 
         // check dead state
         if (c->getBattery() == 0) {
-            char cellHere = grid[c->getPos().y][c->getPos().x];
+            char cellHere = grid[c->getPos().x][c->getPos().y];
             if (cellHere != 'S' && cellHere != 'B') {
                 c->kill();
                 ++deadAgents;

@@ -12,8 +12,8 @@ void FileMapLoader::generate(Config& cfg, std::mt19937& /*rng*/, std::vector<std
         std::cerr << "Could not open map file: " << path << "\n";
         // produce a minimal empty map so caller can handle it
         grid.assign(cfg.rows, std::string(cfg.cols, '.'));
-        basePos = {cfg.cols/2, cfg.rows/2};
-        grid[basePos.y][basePos.x] = 'B';
+        basePos = {cfg.rows/2, cfg.cols/2};
+        grid[basePos.x][basePos.y] = 'B';
         clients.clear();
         stations.clear();
         return;
@@ -30,8 +30,8 @@ void FileMapLoader::generate(Config& cfg, std::mt19937& /*rng*/, std::vector<std
     if (lines.empty()) {
         std::cerr << "Map file is empty: " << path << "\n";
         grid.assign(cfg.rows, std::string(cfg.cols, '.'));
-        basePos = {cfg.cols/2, cfg.rows/2};
-        grid[basePos.y][basePos.x] = 'B';
+        basePos = {cfg.rows/2, cfg.cols/2};
+        grid[basePos.x][basePos.y] = 'B';
         clients.clear();
         stations.clear();
         return;
@@ -55,9 +55,9 @@ void FileMapLoader::generate(Config& cfg, std::mt19937& /*rng*/, std::vector<std
     clients.clear();
     stations.clear();
     bool foundBase = false;
-    for (int y = 0; y < cfg.rows; ++y) {
-        for (int x = 0; x < cfg.cols; ++x) {
-            char c = grid[y][x];
+    for (int x = 0; x < cfg.rows; ++x) {
+        for (int y = 0; y < cfg.cols; ++y) {
+            char c = grid[x][y];
             if (c == 'B') {
                 basePos = {x, y};
                 foundBase = true;
@@ -70,8 +70,8 @@ void FileMapLoader::generate(Config& cfg, std::mt19937& /*rng*/, std::vector<std
     }
 
     if (!foundBase) {
-        basePos = {cfg.cols/2, cfg.rows/2};
-        grid[basePos.y][basePos.x] = 'B';
+        basePos = {cfg.rows/2, cfg.cols/2};
+        grid[basePos.x][basePos.y] = 'B';
         std::cerr << "Map has no base (B); placing base at center (" << basePos.x << "," << basePos.y << ")\n";
     }
 
