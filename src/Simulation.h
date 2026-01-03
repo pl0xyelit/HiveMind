@@ -31,7 +31,7 @@ public:
     // map generation uses Strategy pattern via IMapGenerator
     void setMapGenerator(std::unique_ptr<IMapGenerator> gen);
     void generateMap();
-
+    int computePriority(Courier* c, Package* p) const;
     void spawnCouriers();
     void run();
     void render(); // display current simulation state to terminal

@@ -33,7 +33,7 @@ void Simulation::render() {
         std::string tn = c->typeName();
         if (tn == "Drone") ch = '^';
         else if (tn == "Robot") ch = 'R';
-        else if (tn == "Scooter") ch = 'S'; // litera mare S din alfabetul latin, altfel aveam conflict cu randarea S-ului
+        else if (tn == "Scooter") ch = 's'; // litera mare S din alfabetul latin, altfel aveam conflict cu randarea S-ului
                                             // de la statiile de incarcare
         view[p.x][p.y] = ch; 
     }
@@ -47,7 +47,7 @@ void Simulation::render() {
             if (c == 'D') std::cout << "\x1B[1;32mD\x1B[0m";      // green (destination)
             else if (c == 'B') std::cout << "\x1B[1;36mB\x1B[0m"; // bright cyan (base)
             else if (c == 'S') std::cout << "\x1B[1;33mS\x1B[0m"; // yellow (station)
-            else if (c == 'S') std::cout << "\x1B[1;35mS\x1B[0m"; // magenta (scooter)
+            else if (c == 's') std::cout << "\x1B[1;35mS\x1B[0m"; // magenta (scooter)
             else if (c == '^') std::cout << "\x1B[1;34m^\x1B[0m"; // blue (drone)
             else if (c == 'R') std::cout << "\x1B[1;92mR\x1B[0m"; // gray (robot)
             else std::cout << c;
@@ -263,6 +263,42 @@ void Simulation::loadMapFromFile(std::string mapFile) {
               << " stations=" << stations.size() << "\n";
 }
 
+int Simulation::computePriority(Courier* c, Package* p) const {
+    // 1. Basic reachability
+    Vec2 courierPos = c->getPos();
+    Vec2 dest{p->getDestX(), p->getDestY()};
+    int dist = computeDistance(courierPos, dest, c->canFly());
+    if (dist < 0) return -1e9; // unreachable
+
+    // 2. ETA (ceil division)
+    int eta = (dist + c->getSpeed() - 1) / c->getSpeed();
+    int deliveryTick = currentTick + eta;
+
+    // 3. Lateness penalty
+    int lateness = std::max(0, deliveryTick - p->getDeadline());
+
+    // 4. Operating cost for this delivery
+    int opCost = eta * c->getCost();
+
+    // 5. Battery feasibility check
+    int returnDist = computeDistance(dest, basePos, c->canFly());
+    if (returnDist < 0) return -1e9;
+
+    int returnTicks = (returnDist + c->getSpeed() - 1) / c->getSpeed();
+    int batteryNeeded = (eta + returnTicks) * c->getConsumption();
+
+    if (c->getBattery() < batteryNeeded)
+        return -1e9; // cannot complete safely
+
+    // 6. Final priority score
+    int score = p->getReward()
+                - opCost
+                - lateness * 50;
+
+    return score;
+}
+
+
 void Simulation::spawnCouriers() {
     couriers.clear();
     for (int i = 0; i < cfg.drones; ++i) {
@@ -377,6 +413,11 @@ std::vector<Vec2> Simulation::findPath(const Vec2& a, const Vec2& b, bool canFly
 void Simulation::hiveMindDispatch() {
     // Very simple heuristic: for each waiting package, assign to the courier with free capacity
     // that can reach the destination and still have battery to reach a station/base.
+    // std::sort(packagePool.begin(), packagePool.end(),
+    // [&](Package* a, Package* b) {
+    //     return computePriority(a) > computePriority(b);
+    // });
+
     for (auto it = packagePool.begin(); it != packagePool.end();) {
         Package* pkg = *it;
         bool assigned = false;
@@ -388,6 +429,7 @@ void Simulation::hiveMindDispatch() {
             Vec2 courierPos = c->getPos();
             int dist = computeDistance(courierPos, {pkg->getDestX(), pkg->getDestY()}, c->canFly());
             if (dist < 0) continue;
+            //if ((dist > std::max(cfg.cols, cfg.rows) / 4) && c->typeName() != "Scooter") continue;
             int ticksNeeded = (dist + c->getSpeed() - 1) / c->getSpeed();
             int batteryNeeded = ticksNeeded * c->getConsumption();
             int minReturnDist = computeDistance({pkg->getDestX(), pkg->getDestY()}, basePos, c->canFly());
@@ -395,17 +437,26 @@ void Simulation::hiveMindDispatch() {
             int returnTicks = (minReturnDist + c->getSpeed() - 1) / c->getSpeed();
             int batteryReturn = returnTicks * c->getConsumption();
             if (c->getBattery() < (batteryNeeded + batteryReturn)) continue;
-
+            
             // estimate score: reward minus operating cost minus lateness penalty
-            int estDeliveryTick = currentTick + ticksNeeded;
-            int lateness = std::max(0, estDeliveryTick - pkg->getDeadline());
-            int estCost = ticksNeeded * c->getCost();
-            int score = pkg->getReward() - estCost - (lateness * 50);
+            // int estDeliveryTick = currentTick + ticksNeeded;
+            // int lateness = std::max(0, estDeliveryTick - pkg->getDeadline());
+            // int estCost = ticksNeeded * c->getCost();
+            
+            if (c->typeName() == "Drone" && pkg->getReward() < 300) continue;
+            if (c->typeName() == "Robot" && dist > cfg.rows/3) continue;
+            // int score = pkg->getReward() - estCost - (lateness * 50);
 
+            // if (score > bestScore) {
+            //     bestScore = score;
+            //     bestIdx = (int)i;
+            // }
+            int score = computePriority(c.get(), pkg);
             if (score > bestScore) {
                 bestScore = score;
-                bestIdx = (int)i;
+                bestIdx = i;
             }
+
             
         }
         if (bestIdx >= 0 && bestScore > -100000) {
