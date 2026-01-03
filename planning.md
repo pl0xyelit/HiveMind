@@ -8,6 +8,8 @@
 ## Algoritmi
 * Dispatch (trebuie sa eficientizez algoritmul pentru profit)
 * Noisemap procedural generation pentru harta hahahahah
+## Error Handling 
+* Folosesc o abordare rudimentara unde dau return prematur sau returnez o valoare numerica care inseamna ca ceva a mers prost, trebuie sa implementez erori si sa fac handling al erorilor, in caz ca se strica ceva la mijlocul executiei...
 
 
 
