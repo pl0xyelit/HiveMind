@@ -298,6 +298,16 @@ int Simulation::computePriority(Courier* c, Package* p) const {
     return score;
 }
 
+int Simulation::bestPriorityForPackage(Package* p) const {
+    int best = -1e9;
+    for (auto& c : couriers) {
+        if (c->isDead() || !c->hasFreeCapacity()) continue;
+        int score = computePriority(c.get(), p);
+        if (score > best) best = score;
+    }
+    return best;
+}
+
 
 void Simulation::spawnCouriers() {
     couriers.clear();
@@ -413,10 +423,11 @@ std::vector<Vec2> Simulation::findPath(const Vec2& a, const Vec2& b, bool canFly
 void Simulation::hiveMindDispatch() {
     // Very simple heuristic: for each waiting package, assign to the courier with free capacity
     // that can reach the destination and still have battery to reach a station/base.
-    // std::sort(packagePool.begin(), packagePool.end(),
-    // [&](Package* a, Package* b) {
-    //     return computePriority(a) > computePriority(b);
-    // });
+    std::sort(packagePool.begin(), packagePool.end(),
+    [&](Package* a, Package* b) {
+        return bestPriorityForPackage(a) > bestPriorityForPackage(b);
+    });
+
 
     for (auto it = packagePool.begin(); it != packagePool.end();) {
         Package* pkg = *it;
