@@ -747,7 +747,8 @@ void Simulation::run()
     catch (const MapGenerationError &ex)
     {
         std::cerr << "Fatal map error: " << ex.what() << std::endl;
-        std::exit(EXIT_FAILURE);
+        std::terminate();
+        // ^^^^ could also be `std::exit(EXIT_FAILURE);`
     }
 }
 
