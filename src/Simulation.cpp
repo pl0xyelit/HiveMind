@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <stdexcept>
 #include <exception>
+#include <cstdlib>
 
 #include "Errors.h"
 #include "IMapGenerator.h"
@@ -741,7 +742,12 @@ void Simulation::run()
     catch (const FileOpenError &ex)
     {
         std::cerr << "Fatal config parse error: " << ex.what() << std::endl;
-        std::terminate();
+        std::exit(EXIT_FAILURE);
+    }
+    catch (const MapGenerationError &ex)
+    {
+        std::cerr << "Fatal map error: " << ex.what() << std::endl;
+        std::exit(EXIT_FAILURE);
     }
 }
 

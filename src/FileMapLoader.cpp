@@ -1,5 +1,6 @@
 #include "FileMapLoader.h"
 #include "Simulation.h" // for Config
+#include "Errors.h"
 #include <fstream>
 #include <iostream>
 
@@ -9,14 +10,7 @@ void FileMapLoader::generate(Config& cfg, std::mt19937& /*rng*/, std::vector<std
                               Vec2& basePos, std::vector<Vec2>& clients, std::vector<Vec2>& stations) {
     std::ifstream in(path);
     if (!in) {
-        std::cerr << "Could not open map file: " << path << "\n";
-        // produce a minimal empty map so caller can handle it
-        grid.assign(cfg.rows, std::string(cfg.cols, '.'));
-        basePos = {cfg.rows/2, cfg.cols/2};
-        grid[basePos.x][basePos.y] = 'B';
-        clients.clear();
-        stations.clear();
-        return;
+        throw FileOpenError("Could not open map file: " + path + "\n");
     }
 
     // Read lines and normalize CRLF endings
@@ -28,13 +22,7 @@ void FileMapLoader::generate(Config& cfg, std::mt19937& /*rng*/, std::vector<std
     }
 
     if (lines.empty()) {
-        std::cerr << "Map file is empty: " << path << "\n";
-        grid.assign(cfg.rows, std::string(cfg.cols, '.'));
-        basePos = {cfg.rows/2, cfg.cols/2};
-        grid[basePos.x][basePos.y] = 'B';
-        clients.clear();
-        stations.clear();
-        return;
+        throw MapGenerationError("Map file is empty: " + path + "\n");
     }
 
     // Make rectangular by padding shorter rows with '.'
