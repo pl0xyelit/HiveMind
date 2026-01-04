@@ -86,10 +86,10 @@ Drone::Drone(Vec2 startPos)
 bool Drone::canFly() const { return true; }
 std::string Drone::typeName() const { return "Drone"; }
 
-Vec2 Drone::computeNextMove() {
-    // TODO: implement proper movement
-    return {pos.x + speed, pos.y + speed};
-}
+// Vec2 Drone::computeNextMove() {
+//     // TODO: implement proper movement
+//     return {pos.x + speed, pos.y + speed};
+// }
 
 // ---------------- Robot ----------------
 
@@ -108,10 +108,10 @@ Robot::Robot(Vec2 startPos)
 bool Robot::canFly() const { return false; }
 std::string Robot::typeName() const { return "Robot"; }
 
-Vec2 Robot::computeNextMove() {
-    // TODO: implement proper movement
-    return {pos.x + speed, pos.y};
-}
+// Vec2 Robot::computeNextMove() {
+//     // TODO: implement proper movement
+//     return {pos.x + speed, pos.y};
+// }
 
 // ---------------- Scooter ----------------
 
@@ -130,7 +130,7 @@ Scooter::Scooter(Vec2 startPos)
 bool Scooter::canFly() const { return false; }
 std::string Scooter::typeName() const { return "Scooter"; }
 
-Vec2 Scooter::computeNextMove() {
-    // TODO: implement proper movement
-    return {pos.x, pos.y - speed};
-}
+// Vec2 Scooter::computeNextMove() {
+//     // TODO: implement proper movement
+//     return {pos.x, pos.y - speed};
+// }

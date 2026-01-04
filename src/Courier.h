@@ -20,7 +20,7 @@ public:
     virtual bool canFly() const = 0;
     virtual std::string typeName() const = 0;
 
-    virtual Vec2 computeNextMove() = 0;
+    // virtual Vec2 computeNextMove() = 0;
 
     // Apply movement after dispatcher approves it
     void applyMove(const Vec2& newPos);
@@ -60,7 +60,7 @@ public:
 
     bool canFly() const override;
     std::string typeName() const override;
-    Vec2 computeNextMove() override;
+    // Vec2 computeNextMove() override;
 };
 
 class Robot : public Courier {
@@ -69,7 +69,7 @@ public:
 
     bool canFly() const override;
     std::string typeName() const override;
-    Vec2 computeNextMove() override;
+    // Vec2 computeNextMove() override;
 };
 
 class Scooter : public Courier {
@@ -78,5 +78,5 @@ public:
 
     bool canFly() const override;
     std::string typeName() const override;
-    Vec2 computeNextMove() override;
+    // Vec2 computeNextMove() override;
 };

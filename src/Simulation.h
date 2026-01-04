@@ -26,7 +26,7 @@ struct Config {
 class Simulation {
 public:
     explicit Simulation(const std::string& configPath = "simulation_setup.txt");
-    bool loadConfig();
+    void loadConfig();
 
     // map generation uses Strategy pattern via IMapGenerator
     void setMapGenerator(std::unique_ptr<IMapGenerator> gen);
