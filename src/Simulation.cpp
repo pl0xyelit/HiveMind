@@ -134,65 +134,66 @@ Simulation::Simulation(const std::string &configPath)
 
 void Simulation::loadConfig()
 {
-    try
+    std::ifstream in(configPath);
+    if (!in)
     {
-        std::ifstream in(configPath);
-        if (!in)
+        throw FileOpenError("Could not open config file: " + configPath + "\n");
+    }
+    std::string line;
+    while (std::getline(in, line))
+    {
+        std::istringstream iss(line);
+        std::string key;
+        if (!(iss >> key))
+            continue;
+        if (key == "MAP_SIZE:")
         {
-            throw FileOpenError("Could not open config file: " + configPath + "\n");
+            iss >> cfg.rows >> cfg.cols;
         }
-        std::string line;
-        while (std::getline(in, line))
+        else if (key == "MAX_TICKS:")
         {
-            std::istringstream iss(line);
-            std::string key;
-            if (!(iss >> key))
-                continue;
-            if (key == "MAP_SIZE:")
+            iss >> cfg.maxTicks;
+        }
+        else if (key == "MAX_STATIONS:")
+        {
+            iss >> cfg.maxStations;
+        }
+        else if (key == "CLIENTS_COUNT:")
+        {
+            iss >> cfg.clientsCount;
+        }
+        else if (key == "DRONES:")
+            iss >> cfg.drones;
+        else if (key == "ROBOTS:")
+            iss >> cfg.robots;
+        else if (key == "SCOOTERS:")
+            iss >> cfg.scooters;
+        else if (key == "TOTAL_PACKAGES:")
+            iss >> cfg.totalPackages;
+        else if (key == "SPAWN_FREQUENCY:")
+            iss >> cfg.spawnFrequency;
+        else if (key == "DISPLAY_DELAY_MS:")
+            iss >> cfg.displayDelayMs;
+        else if (key == "MAP_FILE:")
+        {
+            std::string mfile;
+            iss >> mfile;
+            if (!mfile.empty())
             {
-                iss >> cfg.rows >> cfg.cols;
-            }
-            else if (key == "MAX_TICKS:")
-            {
-                iss >> cfg.maxTicks;
-            }
-            else if (key == "MAX_STATIONS:")
-            {
-                iss >> cfg.maxStations;
-            }
-            else if (key == "CLIENTS_COUNT:")
-            {
-                iss >> cfg.clientsCount;
-            }
-            else if (key == "DRONES:")
-                iss >> cfg.drones;
-            else if (key == "ROBOTS:")
-                iss >> cfg.robots;
-            else if (key == "SCOOTERS:")
-                iss >> cfg.scooters;
-            else if (key == "TOTAL_PACKAGES:")
-                iss >> cfg.totalPackages;
-            else if (key == "SPAWN_FREQUENCY:")
-                iss >> cfg.spawnFrequency;
-            else if (key == "DISPLAY_DELAY_MS:")
-                iss >> cfg.displayDelayMs;
-            else if (key == "MAP_FILE:")
-            {
-                std::string mfile;
-                iss >> mfile;
-                if (!mfile.empty())
-                {
-                    mapGenerator = std::make_unique<FileMapLoader>(mfile);
-                    std::cout << "Using map file from config: " << mfile << "\n";
-                }
+                mapGenerator = std::make_unique<FileMapLoader>(mfile);
+                std::cout << "Using map file from config: " << mfile << "\n";
             }
         }
     }
-    catch (const FileOpenError &ex)
-    {
-        std::cerr << "Fatal config parse error: " << ex.what() << std::endl;
-        std::terminate();
-    }
+    // try
+    // {
+
+    // }
+    // catch (const FileOpenError &ex)
+    // {
+    //     std::cerr << "Fatal config parse error: " << ex.what() << std::endl;
+    //     std::terminate();
+    // }
 }
 
 void Simulation::setMapGenerator(std::unique_ptr<IMapGenerator> gen)
@@ -259,13 +260,13 @@ void Simulation::generateMap()
         {
             if (!canRegenerate)
             {
-                std::cerr << "Loaded map is invalid (not all clients/stations reachable from base).\n";
+                throw MapGenerationError("Loaded map is invalid (not all clients/stations reachable from base).\n");
                 break;
             }
             if (attempts >= maxAttempts)
             {
-                std::cerr << "Failed to generate a valid map after " << attempts << " attempts; using last map.\n";
-                break;
+                throw MapGenerationError(
+                    std::string("Failed to generate a valid map after ") + std::to_string(attempts) + " attempts; using last map.\n");
             }
         }
     } while (!validateMap() && canRegenerate);
@@ -276,8 +277,7 @@ void Simulation::loadMapFromFile(std::string mapFile)
     std::ifstream in(mapFile);
     if (!in)
     {
-        std::cerr << "Could not open map file: " << mapFile << "\n";
-        return;
+        throw FileOpenError("Could not open map file: " + mapFile + "\n");
     }
 
     // Read lines and normalize CRLF endings
@@ -292,8 +292,7 @@ void Simulation::loadMapFromFile(std::string mapFile)
 
     if (lines.empty())
     {
-        std::cerr << "Map file is empty: " << mapFile << "\n";
-        return;
+        throw MapGenerationError("Map file is empty: " + mapFile + "\n");
     }
 
     // Make rectangular by padding shorter rows with '.'
@@ -352,6 +351,18 @@ void Simulation::loadMapFromFile(std::string mapFile)
 
     std::cout << "Loaded map '" << mapFile << "' (" << cfg.rows << "x" << cfg.cols << ") - clients=" << clients.size()
               << " stations=" << stations.size() << "\n";
+    // try
+    // {
+
+    // }
+    // catch (const FileOpenError &ex) {
+    //     std::cerr << "Fatal file parse error: " << ex.what() << std::endl;
+    //     std::terminate();
+    // }
+    // catch (const MapGenerationError &ex) {
+    //     std::cerr << "Fatal map generation error: " << ex.what() << std::endl;
+    //     std::terminate();
+    // }
 }
 
 int Simulation::computePriority(Courier *c, Package *p) const
@@ -727,9 +738,10 @@ void Simulation::run()
 
         writeReport();
     }
-    catch (const FileOpenError &ex) {
+    catch (const FileOpenError &ex)
+    {
         std::cerr << "Fatal config parse error: " << ex.what() << std::endl;
-        std::terminate(); 
+        std::terminate();
     }
 }
 
