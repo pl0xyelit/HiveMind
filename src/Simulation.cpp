@@ -566,76 +566,186 @@ std::vector<Vec2> Simulation::findPath(const Vec2 &a, const Vec2 &b, bool canFly
     std::reverse(path.begin(), path.end());
     return path;
 }
+// Hungarian algorithm helper for square cost matrix (minimization)
+static std::vector<int> hungarian(const std::vector<std::vector<long long>> &a)
+{
+    int n = (int)a.size();
+    const long long INF = (long long)4e15;
+    std::vector<long long> u(n + 1), v(n + 1);
+    std::vector<int> p(n + 1), way(n + 1);
+    for (int i = 1; i <= n; ++i)
+    {
+        p[0] = i;
+        int j0 = 0;
+        std::vector<long long> minv(n + 1, INF);
+        std::vector<char> used(n + 1, false);
+        do
+        {
+            used[j0] = true;
+            int i0 = p[j0];
+            int j1 = 0;
+            long long delta = INF;
+            for (int j = 1; j <= n; ++j)
+            {
+                if (used[j])
+                    continue;
+                long long cur = a[i0 - 1][j - 1] - u[i0] - v[j];
+                if (cur < minv[j])
+                {
+                    minv[j] = cur;
+                    way[j] = j0;
+                }
+                if (minv[j] < delta)
+                {
+                    delta = minv[j];
+                    j1 = j;
+                }
+            }
+            for (int j = 0; j <= n; ++j)
+            {
+                if (used[j])
+                {
+                    u[p[j]] += delta;
+                    v[j] -= delta;
+                }
+                else
+                {
+                    minv[j] -= delta;
+                }
+            }
+            j0 = j1;
+        } while (p[j0] != 0);
+        do
+        {
+            int j1 = way[j0];
+            p[j0] = p[j1];
+            j0 = j1;
+        } while (j0);
+    }
+    std::vector<int> match(n, -1);
+    for (int j = 1; j <= n; ++j)
+    {
+        if (p[j] != 0)
+            match[p[j] - 1] = j - 1;
+    }
+    return match;
+}
+
 void Simulation::hiveMindDispatch()
 {
-    // Very simple heuristic: for each waiting package, assign to the courier with free capacity
-    // that can reach the destination and still have battery to reach a station/base.
-    std::sort(packagePool.begin(), packagePool.end(),
-              [&](Package *a, Package *b)
-              {
-                  return bestPriorityForPackage(a) > bestPriorityForPackage(b);
-              });
+    // Build list of waiting packages and available courier slots (one slot per free capacity)
+    std::vector<Package *> pkgs = packagePool; // copy pointers
+    int P = (int)pkgs.size();
+    if (P == 0)
+        return;
 
-    for (auto it = packagePool.begin(); it != packagePool.end();)
+    std::vector<int> slotToCourier; // map column index -> courier index
+    for (size_t i = 0; i < couriers.size(); ++i)
     {
-        Package *pkg = *it;
-        bool assigned = false;
-        int bestIdx = -1;
-        int bestScore = -1000000000;
-        for (size_t i = 0; i < couriers.size(); ++i)
+        auto &c = couriers[i];
+        if (c->isDead())
+            continue;
+        int free = c->getCapacity() - (int)c->getPackages().size();
+        for (int s = 0; s < free; ++s)
+            slotToCourier.push_back((int)i);
+    }
+
+    int M = (int)slotToCourier.size();
+    if (M == 0)
+        return; // no slots available
+
+    // size of square matrix
+    int n = std::max(P, M);
+    const long long INF_COST = (long long)1e12; // large cost to forbid infeasible assignments
+
+    // build cost matrix: cost = -score for feasible assignments, INF_COST for infeasible
+    std::vector<std::vector<long long>> cost(n, std::vector<long long>(n, 0));
+
+    for (int i = 0; i < P; ++i)
+    {
+        Package *pkg = pkgs[i];
+        for (int j = 0; j < M; ++j)
         {
-            auto &c = couriers[i];
-            if (!c->hasFreeCapacity() || c->isDead())
+            int courierIdx = slotToCourier[j];
+            auto &c = couriers[courierIdx];
+            if (c->isDead())
+            {
+                cost[i][j] = INF_COST;
                 continue;
+            }
+            // quick feasibility checks mirroring previous heuristic
             Vec2 courierPos = c->getPos();
             int dist = computeDistance(courierPos, {pkg->getDestX(), pkg->getDestY()}, c->canFly());
-            if (dist < 0)
-                continue;
-            // if ((dist > std::max(cfg.cols, cfg.rows) / 4) && c->typeName() != "Scooter") continue;
+            if (dist < 0) { cost[i][j] = INF_COST; continue; }
+            if (c->typeName() == "Drone" && pkg->getReward() < 300) { cost[i][j] = INF_COST; continue; }
+            if (c->typeName() == "Robot" && dist > cfg.rows / 3) { cost[i][j] = INF_COST; continue; }
+
             int ticksNeeded = (dist + c->getSpeed() - 1) / c->getSpeed();
             int batteryNeeded = ticksNeeded * c->getConsumption();
             int minReturnDist = computeDistance({pkg->getDestX(), pkg->getDestY()}, basePos, c->canFly());
-            if (minReturnDist < 0)
-                continue;
+            if (minReturnDist < 0) { cost[i][j] = INF_COST; continue; }
             int returnTicks = (minReturnDist + c->getSpeed() - 1) / c->getSpeed();
             int batteryReturn = returnTicks * c->getConsumption();
-            if (c->getBattery() < (batteryNeeded + batteryReturn))
-                continue;
+            if (c->getBattery() < (batteryNeeded + batteryReturn)) { cost[i][j] = INF_COST; continue; }
 
-            // estimate score: reward minus operating cost minus lateness penalty
-            // int estDeliveryTick = currentTick + ticksNeeded;
-            // int lateness = std::max(0, estDeliveryTick - pkg->getDeadline());
-            // int estCost = ticksNeeded * c->getCost();
-
-            if (c->typeName() == "Drone" && pkg->getReward() < 300)
-                continue;
-            if (c->typeName() == "Robot" && dist > cfg.rows / 3)
-                continue;
-            // int score = pkg->getReward() - estCost - (lateness * 50);
-
-            // if (score > bestScore) {
-            //     bestScore = score;
-            //     bestIdx = (int)i;
-            // }
             int score = computePriority(c.get(), pkg);
-            if (score > bestScore)
-            {
-                bestScore = score;
-                bestIdx = i;
-            }
+            if (score <= -1000000)
+                cost[i][j] = INF_COST; // infeasible
+            else
+                cost[i][j] = - (long long)score; // minimize -score == maximize score
         }
-        if (bestIdx >= 0 && bestScore > -100000)
+        for (int j = M; j < n; ++j)
         {
-            bool ok = couriers[bestIdx]->assignPackage(pkg);
-            if (ok)
+            // dummy columns: represent leaving the package unassigned (0 cost)
+            cost[i][j] = 0;
+        }
+    }
+    // dummy rows (if any)
+    for (int i = P; i < n; ++i)
+    {
+        for (int j = 0; j < n; ++j)
+            cost[i][j] = 0;
+    }
+
+    // Solve assignment via Hungarian
+    std::vector<int> match = hungarian(cost); // size n, match[row] = col
+
+    // Apply assignments: if row < P and matched col < M and cost not INF_COST, assign
+    std::vector<char> assigned(P, false);
+    for (int i = 0; i < P; ++i)
+    {
+        int j = match[i];
+        if (j < 0 || j >= M)
+            continue;
+        if (cost[i][j] >= INF_COST / 2)
+            continue; // infeasible
+        int courierIdx = slotToCourier[j];
+        auto &c = couriers[courierIdx];
+        if (c->isDead() || !c->hasFreeCapacity())
+            continue; // safety check
+        bool ok = c->assignPackage(pkgs[i]);
+        if (ok)
+            assigned[i] = true;
+    }
+
+    // remove assigned packages from packagePool
+    std::vector<Package *> newPool;
+    newPool.reserve(packagePool.size());
+    for (auto p : packagePool)
+    {
+        bool wasAssigned = false;
+        for (int i = 0; i < P; ++i)
+        {
+            if (assigned[i] && pkgs[i] == p)
             {
-                it = packagePool.erase(it);
-                assigned = true;
+                wasAssigned = true;
+                break;
             }
         }
-        if (!assigned)
-            ++it;
+        if (!wasAssigned)
+            newPool.push_back(p);
     }
+    packagePool.swap(newPool);
 }
 
 void Simulation::step()
