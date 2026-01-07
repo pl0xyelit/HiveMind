@@ -432,18 +432,75 @@ int Simulation::bestPriorityForPackage(Package *p) const
 
 void Simulation::spawnCouriers()
 {
+    // Start with exactly one Drone at the base (if available in config).
+    // Additional couriers will be spawned dynamically as needed during the run.
     couriers.clear();
-    for (int i = 0; i < cfg.drones; ++i)
+    activeDrones = activeRobots = activeScooters = 0;
+
+    if (cfg.drones > 0)
     {
         couriers.push_back(std::make_unique<Drone>(basePos));
+        ++activeDrones;
+        std::cout << "Spawning initial Drone (1/" << cfg.drones << ")\n";
     }
-    for (int i = 0; i < cfg.robots; ++i)
+    else if (cfg.robots > 0)
     {
+        // If no drones configured, spawn one Robot to get the simulation started.
         couriers.push_back(std::make_unique<Robot>(basePos));
+        ++activeRobots;
+        std::cout << "Spawning initial Robot (1/" << cfg.robots << ")\n";
     }
-    for (int i = 0; i < cfg.scooters; ++i)
+    else if (cfg.scooters > 0)
     {
         couriers.push_back(std::make_unique<Scooter>(basePos));
+        ++activeScooters;
+        std::cout << "Spawning initial Scooter (1/" << cfg.scooters << ")\n";
+    }
+}
+
+// Spawn one courier of the next available type, respecting per-type limits.
+void Simulation::spawnOneCourier()
+{
+    // If we can spawn more Drones, prefer them first (they were the initial courier).
+    if (activeDrones < cfg.drones)
+    {
+        couriers.push_back(std::make_unique<Drone>(basePos));
+        ++activeDrones;
+        std::cout << "Spawning Drone (" << activeDrones << "/" << cfg.drones << ")\n";
+        return;
+    }
+    // Then Robots
+    if (activeRobots < cfg.robots)
+    {
+        couriers.push_back(std::make_unique<Robot>(basePos));
+        ++activeRobots;
+        std::cout << "Spawning Robot (" << activeRobots << "/" << cfg.robots << ")\n";
+        return;
+    }
+    // Then Scooters
+    if (activeScooters < cfg.scooters)
+    {
+        couriers.push_back(std::make_unique<Scooter>(basePos));
+        ++activeScooters;
+        std::cout << "Spawning Scooter (" << activeScooters << "/" << cfg.scooters << ")\n";
+        return;
+    }
+    // Nothing left to spawn
+}
+
+// Try to spawn additional couriers when waiting packages build up.
+// New policy: spawn one courier when there are at least `waitingSpawnThreshold` waiting packages.
+void Simulation::trySpawnIfNeeded()
+{
+    int waiting = (int)packagePool.size();
+    if (waiting < waitingSpawnThreshold)
+        return;
+
+    // Only spawn if we haven't already spawned all configured couriers
+    if (activeDrones + activeRobots + activeScooters < (cfg.drones + cfg.robots + cfg.scooters))
+    {
+        std::cout << "Waiting packages (" << waiting << ") reached threshold (" << waitingSpawnThreshold << ") - spawning another courier\n";
+        spawnOneCourier();
     }
 }
 
@@ -814,14 +871,17 @@ void Simulation::step()
     // spawn packages
     spawnPackagesIfNeeded();
 
+    // maybe spawn additional couriers if backlog grows
+    trySpawnIfNeeded();
+
     // dispatch
     hiveMindDispatch();
 
     // move couriers and accumulate operating cost per tick
     for (auto &c : couriers)
-    {
-        if (!c->isDead())
-            operatingCostTotal += c->getCost();
+    {   
+        if (c->isDead()) continue;       // don't run movement logic for dead couriers
+        operatingCostTotal += c->getCost();
         if (!c->getPackages().empty())
         {
             Package *p = c->getPackages().front();

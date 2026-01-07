@@ -59,6 +59,15 @@ private:
     int operatingCostTotal = 0;
     int deadAgents = 0;
 
+    // active counts of spawned couriers by type (do NOT exceed cfg.* values)
+    int activeDrones = 0;
+    int activeRobots = 0;
+    int activeScooters = 0;
+
+    // spawn policy: spawn a new courier once there are at least this many waiting packages
+    // (non-configurable constant for now)
+    static constexpr int waitingSpawnThreshold = 4;
+
     std::mt19937 rng;
 
     // map generation strategy
@@ -68,6 +77,10 @@ private:
     bool allDelivered = false;
     void spawnPackage();
     void spawnPackagesIfNeeded();
+
+    // lazy spawning helpers
+    void spawnOneCourier();
+    void trySpawnIfNeeded();
 
     int computeDistance(const Vec2& a, const Vec2& b, bool canFly) const;
     std::vector<Vec2> findPath(const Vec2& a, const Vec2& b, bool canFly) const;
