@@ -457,7 +457,8 @@ void Simulation::spawnPackage()
     int idx = distClient(rng);
     Vec2 d = clients[idx];
     int id = spawnedPackages;
-    packages.push_back(std::make_unique<Package>(id, d.x, d.y, reward(rng), deadline(rng)));
+    int dl = currentTick + deadline(rng);
+    packages.push_back(std::make_unique<Package>(id, d.x, d.y, reward(rng), dl));
     packagePool.push_back(packages.back().get());
     ++spawnedPackages;
 }
