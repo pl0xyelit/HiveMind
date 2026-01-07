@@ -106,8 +106,22 @@ void Simulation::render()
     provisionalProfit -= operatingCostTotal;
     provisionalProfit -= deadAgents * 500;
 
+    int activeAgents = 0;
+    int carryingAgents = 0;
+    for (const auto &c : couriers)
+    {
+        if (c->isDead())
+            continue;
+        bool isActive = !c->getPackages().empty() || (c->getPos().x != basePos.x || c->getPos().y != basePos.y);
+        if (isActive)
+            ++activeAgents;
+        if (!c->getPackages().empty())
+            ++carryingAgents;
+    }
+
     std::cout << "Tick: " << currentTick << "/" << cfg.maxTicks << "    ";
     std::cout << "Delivered: " << delivered << "    Waiting: " << waiting << "    ";
+    std::cout << "Active: " << activeAgents << " (carrying=" << carryingAgents << ")    ";
     std::cout << "Profit (est): " << provisionalProfit << "\n";
 
     std::cout << std::flush;
@@ -726,6 +740,52 @@ void Simulation::hiveMindDispatch()
         bool ok = c->assignPackage(pkgs[i]);
         if (ok)
             assigned[i] = true;
+    }
+
+    // Fallback: if Hungarian assigned nothing and there are waiting packages, pick the best feasible pairs
+    int assignedCount = 0;
+    for (bool a : assigned)
+        if (a)
+            ++assignedCount;
+
+    if (assignedCount == 0 && P > 0)
+    {
+        const long long FALLBACK_THRESHOLD = -500; // allow small losses to keep system busy
+        struct Cand { long long profit; int pi; int col; };
+        std::vector<Cand> cands;
+        cands.reserve(P * M);
+        for (int i = 0; i < P; ++i)
+        {
+            for (int j = 0; j < M; ++j)
+            {
+                if (cost[i][j] >= INF_COST / 2) continue;
+                long long expectedProfit = -cost[i][j];
+                cands.push_back({expectedProfit, i, j});
+            }
+        }
+        std::sort(cands.begin(), cands.end(), [](const Cand &a, const Cand &b){ return a.profit > b.profit; });
+
+        std::vector<char> courierUsed(M, false);
+        std::vector<char> pkgUsed(P, false);
+        int toTake = std::min(P, M);
+        for (const auto &cand : cands)
+        {
+            if (toTake <= 0) break;
+            if (pkgUsed[cand.pi]) continue;
+            if (courierUsed[cand.col]) continue;
+            if (cand.profit < FALLBACK_THRESHOLD) break; // don't take worse than threshold
+            int courierIdx = slotToCourier[cand.col];
+            auto &c = couriers[courierIdx];
+            if (c->isDead() || !c->hasFreeCapacity()) continue;
+            bool ok = c->assignPackage(pkgs[cand.pi]);
+            if (ok)
+            {
+                assigned[cand.pi] = true;
+                pkgUsed[cand.pi] = true;
+                courierUsed[cand.col] = true;
+                --toTake;
+            }
+        }
     }
 
     // remove assigned packages from packagePool
