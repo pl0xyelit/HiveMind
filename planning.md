@@ -7,9 +7,8 @@
     * Strategia 2: genereaza harta pe baza unui noisemap, procedural
 ## Algoritmi
 * Dispatch (trebuie sa eficientizez algoritmul pentru profit)
-* Noisemap procedural generation pentru harta hahahahah
-## Error Handling 
-* Folosesc o abordare rudimentara unde dau return prematur sau returnez o valoare numerica care inseamna ca ceva a mers prost, trebuie sa implementez erori si sa fac handling al erorilor, in caz ca se strica ceva la mijlocul executiei...
+* Noisemap procedural generation pentru harta hahahahah (ma dau batut???)
+## Unit testuri
 
 
 
@@ -24,6 +23,9 @@
 * Strategy (doar ca NU e implementat cum trebuie modelul Strategy, NU am o interfata IMapGenerator pentru asta)
     * Strategia 1: genereaza harta pe baza unui fisier text, deja dat (pentru debug, harta nu trebuie hardcodata)
     * Strategia 2: genereaza harta pe baza unui noisemap, procedural
+## Error Handling 
+* Folosesc o abordare rudimentara unde dau return prematur sau returnez o valoare numerica care inseamna ca ceva a mers prost, trebuie sa implementez erori si sa fac handling al erorilor, in caz ca se strica ceva la mijlocul executiei...
+
 
 # Structura: ce am nevoie:
 ## Clase

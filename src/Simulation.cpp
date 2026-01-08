@@ -137,14 +137,46 @@ void Simulation::setAllDelivered()
     allDelivered = true;
 }
 
+// Singleton instance pointer (non-owning)
+Simulation* Simulation::singletonInstance = nullptr;
+
+Simulation& Simulation::getInstance()
+{
+    if (!singletonInstance)
+        throw std::runtime_error("No Simulation instance available");
+    return *singletonInstance;
+}
+
+Simulation* Simulation::getInstancePtr()
+{
+    return singletonInstance;
+}
+
+bool Simulation::hasInstance()
+{
+    return singletonInstance != nullptr;
+}
+
 Simulation::Simulation(const std::string &configPath)
     : configPath(configPath)
 {
+    if (singletonInstance != nullptr)
+    {
+        throw std::runtime_error("Simulation singleton already exists");
+    }
+    singletonInstance = this;
+
     std::random_device rd;
     rng.seed(rd());
 
     // Defer choosing map generator until after config is loaded.
     mapGenerator = nullptr;
+}
+
+Simulation::~Simulation()
+{
+    if (singletonInstance == this)
+        singletonInstance = nullptr;
 }
 
 void Simulation::loadConfig()

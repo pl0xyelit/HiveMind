@@ -25,7 +25,24 @@ struct Config {
 
 class Simulation {
 public:
+    // Singleton accessors
+    static Simulation& getInstance();
+    static Simulation* getInstancePtr();
+    static bool hasInstance();
+
+    // Construction: keep the existing public constructor to preserve front-facing
+    // interfaces (e.g., `Simulation sim("file")`). The constructor will register
+    // the created object as the singleton instance; creating a second Simulation
+    // will throw.
     explicit Simulation(const std::string& configPath = "simulation_setup.txt");
+    ~Simulation();
+
+    // non-copyable / non-movable to enforce single instance semantics
+    Simulation(const Simulation&) = delete;
+    Simulation& operator=(const Simulation&) = delete;
+    Simulation(Simulation&&) = delete;
+    Simulation& operator=(Simulation&&) = delete;
+
     void loadConfig();
 
     // map generation uses Strategy pattern via IMapGenerator
@@ -77,6 +94,9 @@ private:
     bool allDelivered = false;
     void spawnPackage();
     void spawnPackagesIfNeeded();
+
+    // Singleton support
+    static Simulation* singletonInstance;
 
     // lazy spawning helpers
     void spawnOneCourier();
