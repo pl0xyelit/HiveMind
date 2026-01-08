@@ -57,6 +57,26 @@ public:
     void setAllDelivered();
     void loadMapFromFile(std::string mapFile);
 
+#ifdef UNIT_TEST
+    // Test-only helpers (exposed only when compiled with -DUNIT_TEST)
+public:
+    std::vector<std::unique_ptr<Package>>& getPackagesForTest();
+    std::vector<Package*>& getPackagePoolForTest();
+    std::vector<std::unique_ptr<Courier>>& getCouriersForTest();
+    void setCurrentTickForTest(int t);
+    void seedRngForTest(unsigned s);
+    void callHiveMindDispatchForTest() { hiveMindDispatch(); }
+    void callSpawnPackageForTest() { spawnPackage(); }
+    void callSpawnCouriersForTest() { spawnCouriers(); }
+    // expose private findPath for tests
+    std::vector<Vec2> callFindPathForTest(const Vec2 &a, const Vec2 &b, bool canFly) const { return findPath(a,b,canFly); }
+
+    // test-only helpers
+    int getDeadAgentsForTest() const { return deadAgents; }
+    void callStepForTest() { step(); }
+private:
+#endif
+
 private:
     Config cfg;
     std::string configPath;

@@ -23,6 +23,17 @@ $(OBJ_DIR):
 -include $(DEPS)
 
 clean:
-	rm -rf $(OBJ_DIR) $(TARGET)
+	rm -rf $(OBJ_DIR) $(TARGET) hive_test
 
 .PHONY: all clean
+
+# Unit test target (no external libraries). Compiles all sources and the
+# tests with UNIT_TEST defined. Enables ASAN/UBSAN for better diagnostics.
+test: $(SRC_DIR)/*.cpp tests/unit_tests.cpp
+	SRCS="$(filter-out $(SRC_DIR)/main.cpp,$(wildcard $(SRC_DIR)/*.cpp))" && \
+	$(CXX) $(CXXFLAGS) -DUNIT_TEST -g -O1 -fsanitize=address,undefined -I$(SRC_DIR) $$SRCS tests/unit_tests.cpp -o hive_test
+
+run-test: test
+	./hive_test
+
+.PHONY: test run-test

@@ -42,6 +42,12 @@ public:
     int getCost() const;
     int getCapacity() const;
 
+#ifdef UNIT_TEST
+    // Test-only setters
+    void setBatteryForTest(int b) { battery = b; }
+    void setPosForTest(const Vec2 &p) { pos = p; }
+#endif
+
 protected:
     Vec2 pos;
     int speed;

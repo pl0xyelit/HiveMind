@@ -179,6 +179,14 @@ Simulation::~Simulation()
         singletonInstance = nullptr;
 }
 
+#ifdef UNIT_TEST
+std::vector<std::unique_ptr<Package>>& Simulation::getPackagesForTest() { return packages; }
+std::vector<Package*>& Simulation::getPackagePoolForTest() { return packagePool; }
+std::vector<std::unique_ptr<Courier>>& Simulation::getCouriersForTest() { return couriers; }
+void Simulation::setCurrentTickForTest(int t) { currentTick = t; }
+void Simulation::seedRngForTest(unsigned s) { rng.seed(s); }
+#endif
+
 void Simulation::loadConfig()
 {
     std::ifstream in(configPath);
@@ -896,6 +904,27 @@ void Simulation::hiveMindDispatch()
             newPool.push_back(p);
     }
     packagePool.swap(newPool);
+    // If we assigned nothing, all packages have been spawned, and there are
+    // still waiting packages but no active couriers able to take them,
+    // consider the remaining packages undeliverable and end the simulation
+    // early to avoid a long idle "freeze" state.
+    if (assignedCount == 0 && P > 0 && spawnedPackages >= cfg.totalPackages)
+    {
+        int activeAgents = 0;
+        for (const auto &c : couriers)
+        {
+            if (c->isDead())
+                continue;
+            bool isActive = !c->getPackages().empty() || (c->getPos().x != basePos.x || c->getPos().y != basePos.y);
+            if (isActive)
+                ++activeAgents;
+        }
+        if (activeAgents == 0)
+        {
+            std::cout << "No active couriers and no feasible assignments for remaining packages; ending simulation early\n";
+            setAllDelivered();
+        }
+    }
 }
 
 void Simulation::step()
