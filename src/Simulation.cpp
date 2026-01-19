@@ -7,6 +7,7 @@
 #include <cmath>
 #include <algorithm>
 #include <map>
+#include <climits>
 #include <thread>
 #include <chrono>
 #include <iomanip>
@@ -122,7 +123,8 @@ void Simulation::render()
     std::cout << "Tick: " << currentTick << "/" << cfg.maxTicks << "    ";
     std::cout << "Delivered: " << delivered << "    Waiting: " << waiting << "    ";
     std::cout << "Active: " << activeAgents << " (carrying=" << carryingAgents << ")    ";
-    std::cout << "Profit (est): " << provisionalProfit << "\n";
+    std::cout << "Profit (est): " << provisionalProfit << "    ";
+    std::cout << "Total agents spawned: " << couriers.size() << "\n";
 
     std::cout << std::flush;
     std::this_thread::sleep_for(std::chrono::milliseconds(cfg.displayDelayMs));
@@ -530,10 +532,15 @@ void Simulation::spawnOneCourier()
 
 // Try to spawn additional couriers when waiting packages build up.
 // New policy: spawn one courier when there are at least `waitingSpawnThreshold` waiting packages.
+// To avoid spawning many agents at once, respect a cooldown between automatic spawns.
 void Simulation::trySpawnIfNeeded()
 {
     int waiting = (int)packagePool.size();
     if (waiting < waitingSpawnThreshold)
+        return;
+
+    // enforce cooldown so we don't spawn multiple couriers in quick succession
+    if (currentTick - lastSpawnTick < spawnCooldownTicks)
         return;
 
     // Only spawn if we haven't already spawned all configured couriers
@@ -541,6 +548,7 @@ void Simulation::trySpawnIfNeeded()
     {
         std::cout << "Waiting packages (" << waiting << ") reached threshold (" << waitingSpawnThreshold << ") - spawning another courier\n";
         spawnOneCourier();
+        lastSpawnTick = currentTick;
     }
 }
 
@@ -848,7 +856,7 @@ void Simulation::hiveMindDispatch()
 
     if (assignedCount == 0 && P > 0)
     {
-        const long long FALLBACK_THRESHOLD = -500; // allow small losses to keep system busy
+        const long long FALLBACK_THRESHOLD = -1000; // allow small losses to keep system busy
         struct Cand { long long profit; int pi; int col; };
         std::vector<Cand> cands;
         cands.reserve(P * M);
@@ -906,8 +914,8 @@ void Simulation::hiveMindDispatch()
     packagePool.swap(newPool);
     // If we assigned nothing, all packages have been spawned, and there are
     // still waiting packages but no active couriers able to take them,
-    // consider the remaining packages undeliverable and end the simulation
-    // early to avoid a long idle "freeze" state.
+    // try a last-resort forced assignment before ending the simulation
+    // (this relaxes heuristic constraints so packages are attempted one way or another).
     if (assignedCount == 0 && P > 0 && spawnedPackages >= cfg.totalPackages)
     {
         int activeAgents = 0;
@@ -921,8 +929,51 @@ void Simulation::hiveMindDispatch()
         }
         if (activeAgents == 0)
         {
-            std::cout << "No active couriers and no feasible assignments for remaining packages; ending simulation early\n";
-            setAllDelivered();
+            std::cout << "No active couriers and no feasible assignments detected; attempting forced assignments\n";
+
+            int forcedAssigned = 0;
+            // Greedily assign each waiting package to the nearest courier that can reach it (ignoring battery/heuristics)
+            for (int i = 0; i < P; ++i)
+            {
+                if (assigned[i]) continue;
+                Package *pkg = pkgs[i];
+                int bestCourier = -1;
+                int bestDist = INT_MAX;
+                for (size_t j = 0; j < couriers.size(); ++j)
+                {
+                    auto &c = couriers[j];
+                    if (c->isDead() || !c->hasFreeCapacity())
+                        continue;
+                    int dist = computeDistance(c->getPos(), {pkg->getDestX(), pkg->getDestY()}, c->canFly());
+                    if (dist < 0) continue; // unreachable
+                    if (dist < bestDist)
+                    {
+                        bestDist = dist;
+                        bestCourier = (int)j;
+                    }
+                }
+                if (bestCourier != -1)
+                {
+                    auto &c = couriers[bestCourier];
+                    bool ok = c->assignPackage(pkg);
+                    if (ok)
+                    {
+                        assigned[i] = true;
+                        ++forcedAssigned;
+                    }
+                }
+            }
+
+            if (forcedAssigned > 0)
+            {
+                std::cout << "Forced assignment succeeded: " << forcedAssigned << " packages assigned\n";
+                assignedCount += forcedAssigned;
+            }
+            else
+            {
+                std::cout << "No available couriers could reach remaining packages; ending simulation early\n";
+                setAllDelivered();
+            }
         }
     }
 }
@@ -1034,7 +1085,7 @@ void Simulation::run()
     catch (const FileOpenError &ex)
     {
         std::cerr << "Fatal config parse error: " << ex.what() << std::endl;
-        std::exit(EXIT_FAILURE);
+        std::terminate();
     }
     catch (const MapGenerationError &ex)
     {

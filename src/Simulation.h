@@ -104,6 +104,10 @@ private:
     // spawn policy: spawn a new courier once there are at least this many waiting packages
     // (non-configurable constant for now)
     static constexpr int waitingSpawnThreshold = 4;
+    // cooldown (in ticks) between successive automatic spawns triggered by backlog
+    static constexpr int spawnCooldownTicks = 5;
+    // tick when we last performed an automatic spawn due to backlog (initialized far in the past)
+    int lastSpawnTick = -1000000;
 
     std::mt19937 rng;
 
